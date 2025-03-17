@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Registro de Asistencia</title>
+</head>
+<body>
+    <button id="btnRegistrarAsistencia">Registrar Asistencia</button>
+
+    <script>
+    // Función para registrar la asistencia
+    function registrarAsistencia() {
+        // Obtener el nombre y correo del usuario actual
+        const nombreUsuario = _spPageContextInfo.userDisplayName;
+        const correoUsuario = _spPageContextInfo.userEmail;
+
+        // Obtener la fecha y hora actual
+        const fechaHoraActual = new Date();
+        const fechaActual = fechaHoraActual.toISOString().split('T')[0]; // Solo la fecha
+        const horaActual = fechaHoraActual.toTimeString().split(' ')[0]; // Solo la hora (HH:MM:SS)
+
+        // Determinar el tipo de registro (Entrada o Salida)
+        const hora = fechaHoraActual.getHours();
+        let tipoRegistro = "";
+
+        if (hora >= 8 && hora < 9) {
+            tipoRegistro = "Entrada"; // Registro de entrada entre las 8:00 y 9:00
+        } else if (hora >= 18) {
+            tipoRegistro = "Salida"; // Registro de salida a partir de las 18:00 (6:00 PM)
+        } else {
+            alert("No es hora de registrar entrada o salida.");
+            return; // No registrar si no es hora válida
+        }
+
+        // URL de la API REST de SharePoint para agregar un elemento a la lista
+        const url = `${_spPageContextInfo.webAbsoluteUrl}/_api/web/lists/getbytitle('Asistencia')/items`;
+
+        // Datos que se enviarán a la lista
+        const datos = {
+            '__metadata': { 'type': 'SP.Data.AsistenciaListItem' }, // Cambia el tipo según el nombre de tu lista
+            'Title': nombreUsuario, // Campo "Nombres"
+            'Correos_x0020_electr_x00f3_nicos': correoUsuario, // Campo "Correos electrónicos"
+            'Fecha': fechaActual, // Campo "Fecha"
+            'Hora': horaActual, // Campo "Hora"
+            'Tipo': tipoRegistro // Campo "Tipo"
+        };
+
+        // Realizar la solicitud POST a la API REST
+        fetch(url, {
+            method: "POST",
+            headers: {
+                "Accept": "application/json;odata=verbose",
+                "Content-Type": "application/json;odata=verbose",
+                "X-RequestDigest": document.getElementById("__REQUESTDIGEST").value
+            },
+            body: JSON.stringify(datos)
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(`Asistencia registrada correctamente: ${tipoRegistro}`);
+            console.log("Respuesta:", data);
+        })
+        .catch(error => {
+            alert("Error al registrar la asistencia.");
+            console.error("Error:", error);
+        });
+    }
+
+    // Asignar la función al botón
+    document.getElementById("btnRegistrarAsistencia").addEventListener("click", registrarAsistencia);
+    </script>
+</body>
+</html>
