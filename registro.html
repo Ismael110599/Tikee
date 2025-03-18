@@ -2,71 +2,82 @@
 <html>
 <head>
     <title>Registro de Asistencia</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <button id="btnRegistrarAsistencia">Registrar Asistencia</button>
 
     <script>
-    // Función para registrar la asistencia
-    function registrarAsistencia() {
-        // Obtener el nombre y correo del usuario actual
-        const nombreUsuario = _spPageContextInfo.userDisplayName;
-        const correoUsuario = _spPageContextInfo.userEmail;
+        function registrarAsistencia() {
+            // Obtener información del usuario actual
+            const nombreUsuario = _spPageContextInfo.userDisplayName;
+            const correoUsuario = _spPageContextInfo.userEmail;
+            const fechaHoraActual = new Date();
+            const fechaActual = fechaHoraActual.toISOString().split('T')[0];
+            const horaActual = fechaHoraActual.toTimeString().split(' ')[0];
+            const hora = fechaHoraActual.getHours();
+            let tipoRegistro = "";
 
-        // Obtener la fecha y hora actual
-        const fechaHoraActual = new Date();
-        const fechaActual = fechaHoraActual.toISOString().split('T')[0]; // Solo la fecha
-        const horaActual = fechaHoraActual.toTimeString().split(' ')[0]; // Solo la hora (HH:MM:SS)
+            // Determinar si es entrada o salida
+            if (hora >= 8 && hora < 9) {
+                tipoRegistro = "Entrada";
+            } else if (hora >= 18) {
+                tipoRegistro = "Salida";
+            } else {
+                alert("No es hora de registrar entrada o salida.");
+                return;
+            }
 
-        // Determinar el tipo de registro (Entrada o Salida)
-        const hora = fechaHoraActual.getHours();
-        let tipoRegistro = "";
+            // URL de la lista RegistroAsistenciaSalida
+            const url = `${_spPageContextInfo.webAbsoluteUrl}/_api/web/lists/getbytitle('RegistroAsistenciaSalida')/items`;
 
-        if (hora >= 8 && hora < 9) {
-            tipoRegistro = "Entrada"; // Registro de entrada entre las 8:00 y 9:00
-        } else if (hora >= 18) {
-            tipoRegistro = "Salida"; // Registro de salida a partir de las 18:00 (6:00 PM)
-        } else {
-            alert("No es hora de registrar entrada o salida.");
-            return; // No registrar si no es hora válida
+            // Datos a enviar a la lista
+            const datos = {
+                '__metadata': { 'type': 'SP.Data.RegistroAsistenciaSalidaListItem' }, // Asegúrate de que el tipo sea correcto
+                'Title': nombreUsuario, // Campo de texto para el nombre del usuario
+                'Correo': correoUsuario, // Campo de texto para el correo electrónico
+                'Fecha': fechaActual, // Campo de fecha
+                'Hora': horaActual, // Campo de texto para la hora
+                'Tipo': tipoRegistro // Campo de texto para el tipo de registro (Entrada/Salida)
+            };
+
+            // Enviar la solicitud POST a la API de SharePoint
+            fetch(url, {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json;odata=verbose",
+                    "Content-Type": "application/json;odata=verbose",
+                    "X-RequestDigest": document.getElementById("__REQUESTDIGEST").value
+                },
+                body: JSON.stringify(datos)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert(`Asistencia registrada correctamente: ${tipoRegistro}`);
+                    console.log("Respuesta:", data);
+                })
+                .catch(error => {
+                    alert("Error al registrar la asistencia.");
+                    console.error("Error:", error);
+                });
         }
 
-        // URL de la API REST de SharePoint para agregar un elemento a la lista
-        const url = `${_spPageContextInfo.webAbsoluteUrl}/_api/web/lists/getbytitle('Asistencia')/items`;
-
-        // Datos que se enviarán a la lista
-        const datos = {
-            '__metadata': { 'type': 'SP.Data.AsistenciaListItem' }, // Cambia el tipo según el nombre de tu lista
-            'Title': nombreUsuario, // Campo "Nombres"
-            'Correos_x0020_electr_x00f3_nicos': correoUsuario, // Campo "Correos electrónicos"
-            'Fecha': fechaActual, // Campo "Fecha"
-            'Hora': horaActual, // Campo "Hora"
-            'Tipo': tipoRegistro // Campo "Tipo"
-        };
-
-        // Realizar la solicitud POST a la API REST
-        fetch(url, {
-            method: "POST",
-            headers: {
-                "Accept": "application/json;odata=verbose",
-                "Content-Type": "application/json;odata=verbose",
-                "X-RequestDigest": document.getElementById("__REQUESTDIGEST").value
-            },
-            body: JSON.stringify(datos)
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(`Asistencia registrada correctamente: ${tipoRegistro}`);
-            console.log("Respuesta:", data);
-        })
-        .catch(error => {
-            alert("Error al registrar la asistencia.");
-            console.error("Error:", error);
-        });
-    }
-
-    // Asignar la función al botón
-    document.getElementById("btnRegistrarAsistencia").addEventListener("click", registrarAsistencia);
+        // Asignar el evento click al botón
+        document.getElementById("btnRegistrarAsistencia").addEventListener("click", registrarAsistencia);
     </script>
 </body>
 </html>
